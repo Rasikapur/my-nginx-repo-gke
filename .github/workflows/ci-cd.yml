@@ -7,7 +7,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     outputs:
-      image: ${{ steps.set-image.outputs.image }}
+      image: IMAGE="${{ secrets.ARTIFACTORY_HOST }}/docker-local/nginx:${{ github.sha }}"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
