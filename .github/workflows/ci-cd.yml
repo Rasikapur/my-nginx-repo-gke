@@ -32,17 +32,17 @@ jobs:
           push: true
           tags: ${{ steps.set-image.outputs.image }}
 
-
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCR_JSON_KEY }}
 
       - name: Get GKE credentials
         uses: google-github-actions/get-gke-credentials@v1
@@ -54,6 +54,6 @@ jobs:
       - name: Update k8s manifest image and deploy
         run: |
           IMAGE="${{ needs.build-and-push.outputs.image }}"
-          # substitute the image placeholder in manifest - or you can template it a different way
+          # Replace the placeholder image in your deployment YAML
           sed -i "s|my-artifactory.example.com/docker-local/nginx:1.0.0|$IMAGE|g" k8s/nginx-deployment.yaml
           kubectl apply -f k8s/nginx-deployment.yaml
