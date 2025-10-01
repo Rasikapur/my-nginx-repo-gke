@@ -1,0 +1,58 @@
+name: Build → Push → Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.set-image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: set-image
+        run: |
+          IMAGE="${{ secrets.ARTIFACTORY_HOST }}/docker-local/nginx:${{ github.sha }}"
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+      - name: Log in to Artifactory Docker registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.ARTIFACTORY_HOST }}
+          username: ${{ secrets.ARTIFACTORY_USER }}
+          password: ${{ secrets.ARTIFACTORY_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.set-image.outputs.image }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: ${{ secrets.GKE_CLUSTER }}
+          location: ${{ secrets.GKE_LOCATION }}
+          project_id: ${{ secrets.GKE_PROJECT }}
+
+      - name: Update k8s manifest image and deploy
+        run: |
+          IMAGE="${{ needs.build-and-push.outputs.image }}"
+          # substitute the image placeholder in manifest - or you can template it a different way
+          sed -i "s|my-artifactory.example.com/docker-local/nginx:1.0.0|$IMAGE|g" k8s/nginx-deployment.yaml
+          kubectl apply -f k8s/nginx-deployment.yaml
