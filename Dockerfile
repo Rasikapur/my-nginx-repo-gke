@@ -1,7 +1,4 @@
-# Dockerfile
 FROM nginx:1.25
-COPY ./html /usr/share/nginx/html
-# add custom nginx.conf if needed
-# COPY nginx.conf /etc/nginx/nginx.conf
+# No COPY command needed if you don’t have custom HTML
 EXPOSE 80
-
+CMD ["nginx", "-g", "daemon off;"]
