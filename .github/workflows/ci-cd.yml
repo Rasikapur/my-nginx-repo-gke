@@ -1,7 +1,7 @@
 name: Build → Push → Deploy
 
 on:
-  workflow-dispatch
+  workflow-dispatch:
 
 jobs:
   build-and-push:
@@ -9,7 +9,8 @@ jobs:
     outputs:
       image: ${{ steps.set-image.outputs.image }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set image tag
         id: set-image
@@ -24,12 +25,13 @@ jobs:
           username: ${{ secrets.ARTIFACTORY_USER }}
           password: ${{ secrets.ARTIFACTORY_PASSWORD }}
 
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: ${{ steps.set-image.outputs.image }}
+
 
   deploy:
     needs: build-and-push
